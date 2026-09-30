@@ -1,0 +1,10 @@
+# Published app images only; combine with actual F inputs. No credentials here.
+images:
+  backend: docker.io/minsoojo/fedops-onprem@sha256:601076e08db0c4fb3988c97a60b522c4ed4179b54d94baa7648cae81decf234f
+  manager: docker.io/minsoojo/fedops-onprem@sha256:b3f0c284713085fac5e921d7f829978b529b2f8fa53b8f497e80e051d874deb4
+  performance: docker.io/minsoojo/fedops-onprem@sha256:142b2c5ac2a414b520bbe255e5e26a29747f8f8dab899324ca6bca27eaf0401b
+  registry: docker.io/minsoojo/fedops-onprem@sha256:06b45d607849b740d0acf1a0ee93e8b0eee17e773bfbfc05196d4b64c17496ba
+  frontend: docker.io/minsoojo/fedops-onprem@sha256:2878636eb4263ccd910e67dcf55161cc73eaf002e070b0dcd922d07bae642789
+  gateway: docker.io/minsoojo/fedops-onprem@sha256:42b21b3c35760d40c402095d5fd6e38daba3d3cf03c7fdb6bffe94eaa636f92e
+imagePullSecrets:
+  - name: fedops-registry-pull

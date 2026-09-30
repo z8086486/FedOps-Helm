@@ -1,0 +1,158 @@
+# Required F inputs are deliberately empty. See examples/f-values.yaml.
+# Never put credentials in this file. One FedOps installation per cluster.
+nodeName: ""
+deployment:
+  provider: onpremise
+  topology: single-node
+  # auto: local for single-node, storage-class for multi-node.
+  storageMode: auto
+  storageClass: ""
+  nodeSelector: {}
+imagePullSecrets: []
+images:
+  frontend: ""
+  backend: ""
+  manager: ""
+  performance: ""
+  gateway: ""
+  registry: ""
+  # Pulled/version-checked locally. F/Task runtime verification remains separate.
+  mongo: docker.io/library/mongo@sha256:03cda579c8caad6573cb98c2b3d5ff5ead452a6450561129b89595b4b9c18de2
+  minio: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+  redis: docker.io/library/redis@sha256:74566c6910d13ae61e7ce73ebd3127438a1fe805b309b097c323142719ec8a5b
+  task: docker.io/tpah20/torch_cpu_amd@sha256:1ed3fbfe398083c5003176281bfb90373219e9e2dae115630ff0b79bf4ce858a
+
+# Hosts must be distinct DNS names (or IPv4 addresses), without scheme/port/path.
+# Resolve all HTTP hosts to the separately installed Istio ingress service.
+access:
+  singleOrigin: false
+  scheme: http
+  webHost: ""
+  managerHost: ""
+  performanceHost: ""
+  registryHost: ""
+  objectsHost: ""
+  flHost: ""
+  additionalCorsOrigins: []
+
+istio:
+  ingressSelector:
+    istio: ingressgateway
+  # If scheme=https, this secret must exist in the ingress workload namespace.
+  tlsSecretName: ""
+  taskVirtualServiceName: fedops-virtualservice
+
+task:
+  serviceType: ClusterIP
+  storageClass: ""
+  nodeSelector: {}
+  storageBasePath: /data/fedops/fedops/tasks
+  storageCapacity: 20Gi
+  portMin: 40026
+  portMax: 40039
+
+persistence:
+  mongo:
+    path: /data/fedops/fedops/mongo
+    size: 100Gi
+    existingClaim: ""
+  registryMongo:
+    path: /data/fedops/fedops/registry-mongo
+    size: 20Gi
+    existingClaim: ""
+  minio:
+    path: /data/fedops/fedops/minio
+    size: 50Gi
+    existingClaim: ""
+
+storage:
+  region: ap-northeast-2
+  modelBucket: global-model
+  xaiBucket: global-model-xai
+  registryLlmsBucket: fedops-llms
+  registryTasksBucket: fedops-tasks
+  registryModelsBucket: fedops-models
+
+# Names only, in the release namespace. Keys are listed in README.md.
+secrets:
+  web: fedops-web
+  performance: fedops-performance
+  registry: fedops-registry
+  mongo: fedops-mongo
+  registryMongo: fedops-registry-mongo
+  minio: fedops-minio
+  taskStorage: fedops-task-storage
+  smtp: fedops-smtp
+
+smtp:
+  host: ""
+  port: 587
+  auth: true
+  starttls: true
+  starttlsRequired: true
+  ssl: false
+  # Empty address uses SPRING_MAIL_USERNAME from secrets.smtp.
+  fromAddress: ""
+  fromName: FedOps
+
+# Paths are a contract for the stage-3 app images, not existing ready images.
+frontend:
+  runtimeConfigPath: /app/client/public/runtime-config.js
+
+# Optional Kubernetes resource budgets/security settings after image UID/GID checks.
+# No guessed UID or broad host chmod is applied.
+workloads:
+  frontend:
+    workingDir: /app/client
+    command: [yarn, start]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  backend:
+    workingDir: /app/server
+    command: [node, src/index.js]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  manager:
+    workingDir: /FedOps-Server/server_manager
+    command: [python3, app.py]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  performance:
+    workingDir: /FedOps-Server/fl_performance
+    command: [python3, app.py]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  gateway:
+    workingDir: /app
+    command: [java, -jar, /app/fedops-mail-auth.jar]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  registry:
+    workingDir: /app
+    command: [node, dist/main]
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  mongo:
+    command: []
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  registryMongo:
+    command: []
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+  minio:
+    command: []
+    resources: {}
+    podSecurityContext: {}
+    securityContext: {}
+redis:
+  resources: {}
+  securityContext: {}

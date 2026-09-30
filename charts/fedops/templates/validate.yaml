@@ -1,0 +1,71 @@
+{{- $mode := include "fedops.storageMode" . -}}
+{{- if and (eq .Values.deployment.topology "single-node") (empty .Values.nodeName) -}}
+{{- fail "single-node requires nodeName" -}}
+{{- end -}}
+{{- if and (eq .Values.deployment.topology "multi-node") (not (empty .Values.nodeName)) -}}
+{{- fail "multi-node requires empty nodeName; use deployment.nodeSelector" -}}
+{{- end -}}
+{{- if and (eq .Values.deployment.topology "multi-node") (eq $mode "local") -}}
+{{- fail "multi-node requires storage-class storage, not local hostPath" -}}
+{{- end -}}
+{{- if eq $mode "storage-class" -}}
+{{- if empty (default .Values.deployment.storageClass .Values.task.storageClass) -}}
+{{- fail "storage-class mode requires task.storageClass or deployment.storageClass" -}}
+{{- end -}}
+{{- range $role, $p := .Values.persistence -}}
+{{- if and (empty $p.existingClaim) (empty (default $.Values.deployment.storageClass $p.storageClass)) -}}
+{{- fail (printf "persistence.%s requires storageClass or existingClaim" $role) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if gt (len (include "fedops.prefix" .)) 40 -}}
+{{- fail "namespace + release name must be at most 39 characters (resource name suffixes)" -}}
+{{- end -}}
+{{- $hosts := list .Values.access.webHost .Values.access.managerHost .Values.access.performanceHost .Values.access.registryHost .Values.access.objectsHost -}}
+{{- if or (and .Values.smtp.ssl (or .Values.smtp.starttls .Values.smtp.starttlsRequired)) (and .Values.smtp.starttlsRequired (not .Values.smtp.starttls)) -}}
+{{- fail "smtp: choose SSL or STARTTLS; starttlsRequired requires starttls" -}}
+{{- end -}}
+{{- if and (not .Values.access.singleOrigin) (ne (len (uniq $hosts)) 5) -}}
+{{- fail "access HTTP hosts must be distinct; objects require an unmodified S3 host/path" -}}
+{{- end -}}
+{{- if .Values.access.singleOrigin -}}
+{{- range $key := list "modelBucket" "xaiBucket" "registryLlmsBucket" "registryTasksBucket" "registryModelsBucket" -}}
+{{- if has (index $.Values.storage $key) (list "fedops" "socket.io") -}}
+{{- fail "singleOrigin storage buckets must not collide with fedops or socket.io routes" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- range $suffix := list "web" "manager-http" "performance-http" "registry-http" "minio-http" -}}
+{{- if eq $.Values.istio.taskVirtualServiceName (printf "%s-%s" $.Release.Name $suffix) -}}
+{{- fail "istio.taskVirtualServiceName must not collide with a Chart-owned HTTP route" -}}
+{{- end -}}
+{{- end -}}
+{{- if gt (int .Values.task.portMin) (int .Values.task.portMax) -}}
+{{- fail "task.portMin must not exceed task.portMax" -}}
+{{- end -}}
+{{- if gt (sub (int .Values.task.portMax) (int .Values.task.portMin)) 999 -}}
+{{- fail "at most 1000 FL ports; keep the external ingress Service port list in sync" -}}
+{{- end -}}
+{{- if and (eq .Values.access.scheme "https") (empty .Values.istio.tlsSecretName) -}}
+{{- fail "istio.tlsSecretName is required for HTTPS" -}}
+{{- end -}}
+{{- $paths := list .Values.task.storageBasePath -}}
+{{- $claims := list -}}
+{{- range $role, $p := .Values.persistence -}}
+  {{- if $p.existingClaim -}}
+    {{- if has $p.existingClaim $claims -}}{{ fail "each persistence role needs a different existingClaim" }}{{- end -}}
+    {{- $claims = append $claims $p.existingClaim -}}
+  {{- else -}}
+    {{- $paths = append $paths $p.path -}}
+  {{- end -}}
+{{- end -}}
+{{- range $i, $a := $paths -}}
+{{- if or (contains "/../" (printf "%s/" $a)) (contains "/./" (printf "%s/" $a)) -}}
+{{- fail "storage paths must not contain dot segments" -}}
+{{- end -}}
+{{- range $j, $b := $paths -}}
+{{- if and (ne $i $j) (or (eq $a $b) (hasPrefix (printf "%s/" $a) $b)) -}}
+{{- fail "DB, MinIO, and Task storage paths must be separate, not nested" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

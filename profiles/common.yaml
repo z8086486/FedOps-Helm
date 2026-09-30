@@ -1,0 +1,22 @@
+# Apply after examples/images-minsoojo.yaml; site values come last.
+imagePullSecrets: []
+access:
+  singleOrigin: true
+  scheme: http
+  publicPort: 30080
+task:
+  serviceType: ClusterIP
+  portMin: 30081
+  portMax: 31080
+images:
+  minio: cgr.dev/chainguard/minio@sha256:6a1d0b45c8669726bba580ced0bfa4cb9fdeed1ed636dfabd81d1577beb6937b
+workloads:
+  minio:
+    podSecurityContext:
+      runAsUser: 65532
+      runAsGroup: 65532
+      fsGroup: 65532
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: [ALL]

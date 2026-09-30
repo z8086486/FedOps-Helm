@@ -1,0 +1,22 @@
+# LOCAL RENDER TEST ONLY. These images/hosts do not exist; never install this file.
+nodeName: f-static-check
+images:
+  frontend: example.invalid/fedops/frontend:static-check
+  backend: example.invalid/fedops/backend:static-check
+  manager: example.invalid/fedops/manager:static-check
+  performance: example.invalid/fedops/performance:static-check
+  gateway: example.invalid/fedops/gateway:static-check
+  registry: example.invalid/fedops/registry:static-check
+  mongo: example.invalid/fedops/mongo:static-check
+  minio: example.invalid/fedops/minio:static-check
+  redis: example.invalid/fedops/redis:static-check
+  task: example.invalid/fedops/task:static-check
+access:
+  webHost: web.example.invalid
+  managerHost: manager.example.invalid
+  performanceHost: performance.example.invalid
+  registryHost: registry.example.invalid
+  objectsHost: objects.example.invalid
+  flHost: fl.example.invalid
+smtp:
+  host: smtp.example.invalid

@@ -1,0 +1,57 @@
+{{- range $role, $p := .Values.persistence }}
+{{- if not $p.existingClaim }}
+{{- $name := include "fedops.claim" (dict "root" $ "role" $role) }}
+{{- if eq (include "fedops.storageMode" $) "local" }}
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ $name }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "fedops.labels" $ | nindent 4 }}
+spec:
+  capacity:
+    storage: {{ $p.size }}
+  volumeMode: Filesystem
+  accessModes: [ReadWriteOnce]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: ""
+  claimRef:
+    namespace: {{ $.Release.Namespace }}
+    name: {{ $name }}
+  local:
+    path: {{ $p.path | quote }}
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values: [{{ $.Values.nodeName | quote }}]
+{{- end }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    helm.sh/resource-policy: keep
+  labels:
+    {{- include "fedops.labels" $ | nindent 4 }}
+spec:
+  accessModes: [ReadWriteOnce]
+  volumeMode: Filesystem
+  {{- if eq (include "fedops.storageMode" $) "local" }}
+  storageClassName: ""
+  volumeName: {{ $name }}
+  {{- else }}
+  storageClassName: {{ default $.Values.deployment.storageClass $p.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ $p.size }}
+{{- end }}
+{{- end }}

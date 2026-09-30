@@ -1,0 +1,668 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "nodeName": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/host"
+        },
+        {
+          "const": ""
+        }
+      ]
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "$ref": "#/definitions/resourceName"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      }
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frontend": {
+          "$ref": "#/definitions/image"
+        },
+        "backend": {
+          "$ref": "#/definitions/image"
+        },
+        "manager": {
+          "$ref": "#/definitions/image"
+        },
+        "performance": {
+          "$ref": "#/definitions/image"
+        },
+        "gateway": {
+          "$ref": "#/definitions/image"
+        },
+        "registry": {
+          "$ref": "#/definitions/image"
+        },
+        "mongo": {
+          "$ref": "#/definitions/image"
+        },
+        "minio": {
+          "$ref": "#/definitions/image"
+        },
+        "redis": {
+          "$ref": "#/definitions/image"
+        },
+        "task": {
+          "$ref": "#/definitions/image"
+        }
+      },
+      "required": [
+        "frontend",
+        "backend",
+        "manager",
+        "performance",
+        "gateway",
+        "registry",
+        "mongo",
+        "minio",
+        "redis",
+        "task"
+      ]
+    },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "singleOrigin": {
+          "type": "boolean"
+        },
+        "publicPort": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "scheme": {
+          "enum": [
+            "http",
+            "https"
+          ]
+        },
+        "webHost": {
+          "$ref": "#/definitions/host"
+        },
+        "managerHost": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/host"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "performanceHost": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/host"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "registryHost": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/host"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "objectsHost": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/host"
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "flHost": {
+          "$ref": "#/definitions/host"
+        },
+        "additionalCorsOrigins": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/origin"
+          }
+        }
+      },
+      "required": [
+        "scheme",
+        "webHost",
+        "managerHost",
+        "performanceHost",
+        "registryHost",
+        "objectsHost",
+        "flHost",
+        "additionalCorsOrigins"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "singleOrigin": {
+                "const": true
+              }
+            },
+            "required": [
+              "singleOrigin"
+            ]
+          },
+          "then": {},
+          "else": {
+            "properties": {
+              "managerHost": {
+                "$ref": "#/definitions/host"
+              },
+              "performanceHost": {
+                "$ref": "#/definitions/host"
+              },
+              "registryHost": {
+                "$ref": "#/definitions/host"
+              },
+              "objectsHost": {
+                "$ref": "#/definitions/host"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "istio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ingressSelector": {
+          "$ref": "#/definitions/selector"
+        },
+        "tlsSecretName": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "maxLength": 63
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "taskVirtualServiceName": {
+          "$ref": "#/definitions/resourceName"
+        }
+      },
+      "required": [
+        "ingressSelector",
+        "tlsSecretName",
+        "taskVirtualServiceName"
+      ]
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "storageBasePath": {
+          "$ref": "#/definitions/absolutePath"
+        },
+        "storageCapacity": {
+          "$ref": "#/definitions/storageQuantity"
+        },
+        "portMin": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535
+        },
+        "portMax": {
+          "type": "integer",
+          "minimum": 1024,
+          "maximum": 65535
+        },
+        "serviceType": {
+          "enum": [
+            "ClusterIP",
+            "LoadBalancer"
+          ]
+        },
+        "storageClass": {
+          "type": "string"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "storageBasePath",
+        "storageCapacity",
+        "portMin",
+        "portMax"
+      ]
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mongo": {
+          "$ref": "#/definitions/persistence"
+        },
+        "registryMongo": {
+          "$ref": "#/definitions/persistence"
+        },
+        "minio": {
+          "$ref": "#/definitions/persistence"
+        }
+      },
+      "required": [
+        "mongo",
+        "registryMongo",
+        "minio"
+      ]
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "region": {
+          "$ref": "#/definitions/bucketOrRegion"
+        },
+        "modelBucket": {
+          "$ref": "#/definitions/bucketOrRegion"
+        },
+        "xaiBucket": {
+          "$ref": "#/definitions/bucketOrRegion"
+        },
+        "registryLlmsBucket": {
+          "$ref": "#/definitions/bucketOrRegion"
+        },
+        "registryTasksBucket": {
+          "$ref": "#/definitions/bucketOrRegion"
+        },
+        "registryModelsBucket": {
+          "$ref": "#/definitions/bucketOrRegion"
+        }
+      },
+      "required": [
+        "region",
+        "modelBucket",
+        "xaiBucket",
+        "registryLlmsBucket",
+        "registryTasksBucket",
+        "registryModelsBucket"
+      ]
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "web": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "performance": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "registry": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "mongo": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "registryMongo": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "minio": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "taskStorage": {
+          "$ref": "#/definitions/resourceName"
+        },
+        "smtp": {
+          "$ref": "#/definitions/resourceName"
+        }
+      },
+      "required": [
+        "web",
+        "performance",
+        "registry",
+        "mongo",
+        "registryMongo",
+        "minio",
+        "taskStorage",
+        "smtp"
+      ]
+    },
+    "smtp": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "$ref": "#/definitions/host"
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "auth": {
+          "type": "boolean"
+        },
+        "starttls": {
+          "type": "boolean"
+        },
+        "starttlsRequired": {
+          "type": "boolean"
+        },
+        "ssl": {
+          "type": "boolean"
+        },
+        "fromAddress": {
+          "type": "string",
+          "maxLength": 254,
+          "anyOf": [
+            {
+              "const": ""
+            },
+            {
+              "pattern": "^[^\\s<>(),;:@]+@[^\\s<>(),;:@]+\\.[^\\s<>(),;:@]+$"
+            }
+          ],
+          "not": {
+            "pattern": "[\r\n]"
+          }
+        },
+        "fromName": {
+          "type": "string",
+          "maxLength": 200,
+          "not": {
+            "pattern": "[\r\n]"
+          }
+        }
+      },
+      "required": [
+        "host",
+        "port",
+        "auth",
+        "starttls",
+        "starttlsRequired"
+      ]
+    },
+    "frontend": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runtimeConfigPath": {
+          "$ref": "#/definitions/absolutePath"
+        }
+      },
+      "required": [
+        "runtimeConfigPath"
+      ]
+    },
+    "workloads": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frontend": {
+          "$ref": "#/definitions/workload"
+        },
+        "backend": {
+          "$ref": "#/definitions/workload"
+        },
+        "manager": {
+          "$ref": "#/definitions/workload"
+        },
+        "performance": {
+          "$ref": "#/definitions/workload"
+        },
+        "gateway": {
+          "$ref": "#/definitions/workload"
+        },
+        "registry": {
+          "$ref": "#/definitions/workload"
+        },
+        "mongo": {
+          "$ref": "#/definitions/workload"
+        },
+        "registryMongo": {
+          "$ref": "#/definitions/workload"
+        },
+        "minio": {
+          "$ref": "#/definitions/workload"
+        }
+      },
+      "required": [
+        "frontend",
+        "backend",
+        "manager",
+        "performance",
+        "gateway",
+        "registry",
+        "mongo",
+        "registryMongo",
+        "minio"
+      ]
+    },
+    "redis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "resources": {
+          "$ref": "#/definitions/nativeObject"
+        },
+        "securityContext": {
+          "$ref": "#/definitions/nativeObject"
+        }
+      },
+      "required": [
+        "resources",
+        "securityContext"
+      ]
+    },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "topology",
+        "storageMode",
+        "storageClass",
+        "nodeSelector"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "onpremise",
+            "kakaocloud"
+          ]
+        },
+        "topology": {
+          "enum": [
+            "single-node",
+            "multi-node"
+          ]
+        },
+        "storageMode": {
+          "enum": [
+            "auto",
+            "local",
+            "storage-class"
+          ]
+        },
+        "storageClass": {
+          "type": "string"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "required": [
+    "nodeName",
+    "imagePullSecrets",
+    "images",
+    "access",
+    "istio",
+    "task",
+    "persistence",
+    "storage",
+    "secrets",
+    "smtp",
+    "frontend",
+    "workloads",
+    "redis"
+  ],
+  "definitions": {
+    "host": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
+      "maxLength": 253
+    },
+    "resourceName": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+      "maxLength": 63
+    },
+    "image": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._/:-]*(?::[A-Za-z0-9_][A-Za-z0-9_.-]*|@sha256:[a-f0-9]{64})$",
+      "not": {
+        "pattern": ":latest$"
+      }
+    },
+    "origin": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^https?://[a-zA-Z0-9.-]+(?::[0-9]{1,5})?$"
+    },
+    "selector": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "absolutePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^/[^/\\s]+(?:/[^/\\s]+)*$"
+    },
+    "storageQuantity": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+    },
+    "bucketOrRegion": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9.-]*[a-z0-9]$"
+    },
+    "nativeObject": {
+      "type": "object"
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "workingDir": {
+          "$ref": "#/definitions/absolutePath"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/nonEmptyString"
+          }
+        },
+        "resources": {
+          "$ref": "#/definitions/nativeObject"
+        },
+        "podSecurityContext": {
+          "$ref": "#/definitions/nativeObject"
+        },
+        "securityContext": {
+          "$ref": "#/definitions/nativeObject"
+        },
+        "nodeSelector": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "command",
+        "resources",
+        "podSecurityContext",
+        "securityContext"
+      ]
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "$ref": "#/definitions/absolutePath"
+        },
+        "size": {
+          "$ref": "#/definitions/storageQuantity"
+        },
+        "existingClaim": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "maxLength": 63
+            },
+            {
+              "const": ""
+            }
+          ]
+        },
+        "storageClass": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "size",
+        "existingClaim"
+      ]
+    }
+  }
+}

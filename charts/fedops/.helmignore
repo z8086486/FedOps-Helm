@@ -1,0 +1,4 @@
+tests/
+*.tgz
+__pycache__/
+*.pyc

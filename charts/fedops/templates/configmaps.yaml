@@ -1,0 +1,104 @@
+{{- $roles := include "fedops.roles" . | fromYaml -}}
+{{- $web := include "fedops.publicUrl" (dict "root" . "host" "webHost") -}}
+{{- $objects := include "fedops.publicUrl" (dict "root" . "host" "objectsHost") -}}
+{{- $cors := join "," (prepend .Values.access.additionalCorsOrigins $web | uniq) -}}
+{{- $minio := include "fedops.url" (dict "root" . "role" "minio") -}}
+{{- range $role := list "frontend" "backend" "manager" "performance" "gateway" "registry" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Release.Name }}-{{ $role }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "fedops.labels" $ | nindent 4 }}
+data:
+  {{- if eq $role "frontend" }}
+  HOST: "0.0.0.0"
+  PORT: "3000"
+  BROWSER: "none"
+  WDS_SOCKET_PORT: "0"
+  WEB_BACKEND_PROXY_TARGET: {{ include "fedops.url" (dict "root" $ "role" "backend") | quote }}
+  OBJECT_STORAGE_PROXY_TARGET: {{ $minio | quote }}
+  OBJECT_STORAGE_PUBLIC_ORIGIN: {{ $objects | quote }}
+  {{- else if eq $role "backend" }}
+  NODE_ENV: "production"
+  PORT: "4000"
+  FL_SERVER_MANAGER_URL: {{ include "fedops.url" (dict "root" $ "role" "manager") | quote }}
+  EMAIL_VERIFICATION_BASE_URL: {{ include "fedops.url" (dict "root" $ "role" "gateway") | quote }}
+  RUNTIME_ARTIFACT_BASE_URL: {{ printf "%s/fedops/api/task-releases/runtime-artifacts" (include "fedops.url" (dict "root" $ "role" "backend")) | quote }}
+  REGISTRY_API_BASE_URL: {{ include "fedops.url" (dict "root" $ "role" "registry") | quote }}
+  REGISTRY_API_TIMEOUT_MS: "30000"
+  FL_SERVER_MANAGER_PUBLIC_URL: {{ include "fedops.publicUrl" (dict "root" $ "host" "managerHost") | quote }}
+  FL_AGGREGATION_PUBLIC_HOST: {{ $.Values.access.flHost | quote }}
+  CORS_ORIGINS: {{ $cors | quote }}
+  S3_ENDPOINT_URL: {{ $minio | quote }}
+  S3_PUBLIC_ENDPOINT_URL: {{ $objects | quote }}
+  S3_FORCE_PATH_STYLE: "true"
+  REGION_NAME: {{ $.Values.storage.region | quote }}
+  BUCKET_NAME: {{ $.Values.storage.modelBucket | quote }}
+  XAI_BUCKET_NAME: {{ $.Values.storage.xaiBucket | quote }}
+  {{- else if eq $role "manager" }}
+  TARGET_NAMESPACE: {{ $.Release.Namespace | quote }}
+  FEDOPS_TASK_SERVICE_TYPE: {{ $.Values.task.serviceType | quote }}
+  FEDOPS_TASK_STORAGE_MODE: {{ include "fedops.storageMode" $ | quote }}
+  FEDOPS_TASK_STORAGE_CLASS: {{ default $.Values.deployment.storageClass $.Values.task.storageClass | quote }}
+  FEDOPS_TASK_NODE_SELECTOR: {{ ternary (dict "kubernetes.io/hostname" $.Values.nodeName) (default $.Values.deployment.nodeSelector $.Values.task.nodeSelector) (eq $.Values.deployment.topology "single-node") | toJson | quote }}
+  FEDOPS_DEPLOYMENT_TOPOLOGY: {{ $.Values.deployment.topology | quote }}
+  FEDOPS_TASK_PUBLIC_HOST: {{ $.Values.access.flHost | quote }}
+  FEDOPS_SERVER_MANAGER_URL: {{ include "fedops.url" (dict "root" $ "role" "manager") | quote }}
+  FEDOPS_CLIENT_PERFORMANCE_URL: {{ include "fedops.url" (dict "root" $ "role" "performance") | quote }}
+  WEB_BACKEND_SERVER: {{ include "fedops.url" (dict "root" $ "role" "backend") | quote }}
+  FEDOPS_HOSTPATH_STORAGE_NODE: {{ $.Values.nodeName | quote }}
+  FEDOPS_TASK_STORAGE_BASE_PATH: {{ $.Values.task.storageBasePath | quote }}
+  FEDOPS_TASK_STORAGE_CAPACITY: {{ $.Values.task.storageCapacity | quote }}
+  FL_SERVER_PORT_MIN: {{ $.Values.task.portMin | quote }}
+  FL_SERVER_PORT_MAX: {{ $.Values.task.portMax | quote }}
+  FEDOPS_ISTIO_VIRTUAL_SERVICE: {{ $.Values.istio.taskVirtualServiceName | quote }}
+  FEDOPS_ISTIO_GATEWAY: {{ printf "%s/%s-gateway" $.Release.Namespace $.Release.Name | quote }}
+  FEDOPS_ISTIO_HOST: "*"
+  FEDOPS_TASK_IMAGE: {{ $.Values.images.task | quote }}
+  FEDOPS_TASK_S3_SECRET_NAME: {{ $.Values.secrets.taskStorage | quote }}
+  S3_ENDPOINT_URL: {{ $minio | quote }}
+  S3_PUBLIC_ENDPOINT_URL: {{ $objects | quote }}
+  S3_FORCE_PATH_STYLE: "true"
+  REGION_NAME: {{ $.Values.storage.region | quote }}
+  {{- else if eq $role "performance" }}
+  MONGODB_DATABASE: "fedops"
+  {{- else if eq $role "gateway" }}
+  SPRING_MAIL_HOST: {{ $.Values.smtp.host | quote }}
+  SPRING_MAIL_PORT: {{ $.Values.smtp.port | quote }}
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: {{ $.Values.smtp.auth | quote }}
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: {{ $.Values.smtp.starttls | quote }}
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: {{ $.Values.smtp.starttlsRequired | quote }}
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: {{ $.Values.smtp.ssl | quote }}
+  {{- if $.Values.smtp.fromAddress }}
+  FEDOPS_MAIL_FROM_ADDRESS: {{ $.Values.smtp.fromAddress | quote }}
+  {{- end }}
+  FEDOPS_MAIL_FROM_NAME: {{ $.Values.smtp.fromName | quote }}
+  SPRING_DATA_REDIS_HOST: "127.0.0.1"
+  SPRING_DATA_REDIS_PORT: "6379"
+  {{- else if eq $role "registry" }}
+  APP_ENV: "production"
+  APP_PORT: "8012"
+  MONGODB_DATABASE: "fedops-registry"
+  CORS_ORIGINS: {{ $cors | quote }}
+  AWS_S3_ENDPOINT_URL: {{ $minio | quote }}
+  AWS_S3_PUBLIC_ENDPOINT_URL: {{ $objects | quote }}
+  AWS_DEFAULT_REGION: {{ $.Values.storage.region | quote }}
+  AWS_S3_LLMS_BUCKET: {{ $.Values.storage.registryLlmsBucket | quote }}
+  AWS_S3_TASKS_BUCKET: {{ $.Values.storage.registryTasksBucket | quote }}
+  AWS_S3_GLOBAL_MODEL_BUCKET: {{ $.Values.storage.registryModelsBucket | quote }}
+  {{- end }}
+{{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-browser
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fedops.labels" . | nindent 4 }}
+data:
+  runtime-config.js: |
+    window.__FEDOPS_CONFIG__ = {{ dict "objectStorageOrigin" $objects | toJson }};

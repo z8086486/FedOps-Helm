@@ -1,0 +1,16 @@
+# Set the actual CSI StorageClass name in YOUR cluster; do not guess it.
+# For zonal block storage, prefer WaitForFirstConsumer and reachable eligible AZs.
+deployment:
+  storageClass: ""
+  nodeSelector: {}
+access:
+  webHost: ""
+  flHost: ""
+smtp:
+  host: ""
+persistence:
+  mongo: {size: 4Gi}
+  registryMongo: {size: 2Gi}
+  minio: {size: 8Gi}
+task:
+  storageCapacity: 2Gi

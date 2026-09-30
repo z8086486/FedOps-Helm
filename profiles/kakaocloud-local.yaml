@@ -1,0 +1,6 @@
+# Default KakaoCloud setup: a multi-node cluster, with FedOps pinned to one VM.
+# No StorageClass/CSI conversion required. Set nodeName in the site file.
+deployment:
+  provider: kakaocloud
+  topology: single-node
+  storageMode: local

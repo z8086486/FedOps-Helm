@@ -1,0 +1,26 @@
+{{- range $role, $spec := include "fedops.roles" . | fromYaml }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $spec.service }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "fedops.labels" $ | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+    app.kubernetes.io/component: {{ $role | quote }}
+  ports:
+    - name: {{ ternary "tcp-db" "http" (has $role (list "mongo" "registryMongo")) }}
+      port: {{ $spec.servicePort }}
+      targetPort: app
+      protocol: TCP
+    {{- if eq $role "minio" }}
+    - name: http-console
+      port: 9001
+      targetPort: console
+      protocol: TCP
+    {{- end }}
+{{- end }}

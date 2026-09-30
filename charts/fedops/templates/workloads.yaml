@@ -1,0 +1,170 @@
+{{- $root := . -}}
+{{- range $role, $spec := include "fedops.roles" . | fromYaml }}
+{{- $w := index $.Values.workloads $role }}
+{{- $imageKey := ternary "mongo" $role (eq $role "registryMongo") }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $spec.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "fedops.labels" $ | nindent 4 }}
+spec:
+  replicas: 1
+  # Singleton DBs/Manager and local disks: never start two writers on upgrade.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+      app.kubernetes.io/component: {{ $role | quote }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+        app.kubernetes.io/component: {{ $role | quote }}
+        app.kubernetes.io/part-of: fedops
+      annotations:
+        sidecar.istio.io/inject: "false"
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") $ | sha256sum }}
+        {{- if eq $role "manager" }}
+        checksum/manager-network: {{ include (print $.Template.BasePath "/manager-network.yaml") $ | sha256sum }}
+        {{- end }}
+    spec:
+      {{- if eq $.Values.deployment.topology "single-node" }}
+      nodeSelector:
+        kubernetes.io/hostname: {{ $.Values.nodeName | quote }}
+      {{- else }}
+      {{- with (default $.Values.deployment.nodeSelector $w.nodeSelector) }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ $.Release.Name | quote }}
+      {{- end }}
+      automountServiceAccountToken: {{ eq $role "manager" }}
+      {{- if eq $role "manager" }}
+      serviceAccountName: {{ $.Release.Name }}-manager
+      {{- end }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml $w.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ $role | kebabcase }}
+          image: {{ index $.Values.images $imageKey | quote }}
+          imagePullPolicy: IfNotPresent
+          {{- with $w.workingDir }}
+          workingDir: {{ . | quote }}
+          {{- end }}
+          {{- with $w.command }}
+          command: {{ toJson . }}
+          {{- end }}
+          {{- if eq $role "minio" }}
+          args: [server, /data, --console-address, ":9001"]
+          {{- end }}
+          ports:
+            - name: app
+              containerPort: {{ $spec.port }}
+            {{- if eq $role "minio" }}
+            - name: console
+              containerPort: 9001
+            {{- end }}
+          {{- if not (has $role (list "mongo" "registryMongo" "minio")) }}
+          envFrom:
+            - configMapRef:
+                name: {{ $.Release.Name }}-{{ $role }}
+          {{- end }}
+          {{- if eq $role "backend" }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.web "keys" (list "MONGO_URI" "JWT_SECRET")) | nindent 12 }}
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.taskStorage "keys" (list "ACCESS_KEY_ID" "ACCESS_SECRET_KEY")) | nindent 12 }}
+          {{- else if eq $role "performance" }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.performance "keys" (list "MONGODB_URI")) | nindent 12 }}
+          {{- else if eq $role "gateway" }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.smtp "keys" (list "SPRING_MAIL_USERNAME" "SPRING_MAIL_PASSWORD")) | nindent 12 }}
+          {{- else if eq $role "registry" }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.registry "keys" (list "MONGODB_URI" "AWS_ACCESS_KEY_ID" "AWS_SECRET_ACCESS_KEY")) | nindent 12 }}
+          {{- else if has $role (list "mongo" "registryMongo") }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" (index $.Values.secrets $role) "keys" (list "MONGO_INITDB_ROOT_USERNAME" "MONGO_INITDB_ROOT_PASSWORD")) | nindent 12 }}
+          {{- else if eq $role "minio" }}
+          env:
+            {{- include "fedops.secretEnv" (dict "name" $.Values.secrets.minio "keys" (list "MINIO_ROOT_USER" "MINIO_ROOT_PASSWORD")) | nindent 12 }}
+            - name: MINIO_REGION_NAME
+              value: {{ $.Values.storage.region | quote }}
+          {{- end }}
+          {{- if or $spec.dataPath (eq $role "frontend") (eq $role "manager") }}
+          volumeMounts:
+            {{- if eq $role "manager" }}
+            - name: manager-network
+              mountPath: /FedOps-Server/server_manager/utils/scalable_server_operator.py
+              subPath: scalable_server_operator.py
+              readOnly: true
+            - name: manager-network
+              mountPath: /FedOps-Server/server_manager/utils/runtime_reconciler.py
+              subPath: runtime_reconciler.py
+              readOnly: true
+            {{- else if $spec.dataPath }}
+            - name: data
+              mountPath: {{ $spec.dataPath }}
+            {{- else }}
+            - name: browser-config
+              mountPath: {{ $.Values.frontend.runtimeConfigPath | quote }}
+              subPath: runtime-config.js
+              readOnly: true
+            {{- end }}
+          {{- end }}
+          startupProbe:
+            tcpSocket: {port: app}
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            tcpSocket: {port: app}
+            periodSeconds: 10
+          resources:
+            {{- toYaml $w.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $w.securityContext | nindent 12 }}
+        {{- if eq $role "gateway" }}
+        - name: redis
+          image: {{ $.Values.images.redis | quote }}
+          imagePullPolicy: IfNotPresent
+          command: [redis-server]
+          args: [--bind, "127.0.0.1", --save, "", --appendonly, "no"]
+          readinessProbe:
+            exec:
+              command: [redis-cli, ping]
+          resources:
+            {{- toYaml $.Values.redis.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml $.Values.redis.securityContext | nindent 12 }}
+        {{- end }}
+      {{- if or $spec.dataPath (eq $role "frontend") (eq $role "manager") }}
+      volumes:
+        {{- if eq $role "manager" }}
+        - name: manager-network
+          configMap:
+            name: {{ $.Release.Name }}-manager-network
+        {{- else if $spec.dataPath }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "fedops.claim" (dict "root" $ "role" $role) }}
+        {{- else }}
+        - name: browser-config
+          configMap:
+            name: {{ $.Release.Name }}-browser
+        {{- end }}
+      {{- end }}
+{{- end }}

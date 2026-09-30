@@ -1,0 +1,5 @@
+nodeName: ""
+deployment:
+  provider: onpremise
+  topology: multi-node
+  storageMode: auto

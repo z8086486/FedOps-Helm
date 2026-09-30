@@ -1,0 +1,5 @@
+# Apply after the F values file. No workstation hosts/DNS changes required.
+# Clients must be able to reach this temporary F ingress IP.
+access:
+  singleOrigin: true
+  webHost: 192.0.2.10

@@ -1,0 +1,16 @@
+# Existing, tested dynamic provisioner required. Do not use kubernetes.io/no-provisioner.
+deployment:
+  storageClass: ""
+  # Optional worker selection, e.g. fedops.io/pool: workers
+  nodeSelector: {}
+access:
+  webHost: ""
+  flHost: ""
+smtp:
+  host: ""
+persistence:
+  mongo: {size: 4Gi}
+  registryMongo: {size: 2Gi}
+  minio: {size: 8Gi}
+task:
+  storageCapacity: 2Gi

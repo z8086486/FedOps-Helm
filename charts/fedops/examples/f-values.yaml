@@ -1,0 +1,21 @@
+# Deployment input template, intentionally invalid until F inputs and verified images are supplied.
+# Secrets are created separately; do not paste secret values here.
+nodeName: REPLACE_WITH_F_HOSTNAME
+images:
+  frontend: ''
+  backend: ''
+  manager: ''
+  performance: ''
+  gateway: ''
+  registry: ''
+  # Mongo/MinIO/Redis/Task base inherit the verified digest defaults.
+  # Task Runtime package consumption still needs separate verification.
+access:
+  webHost: ''
+  managerHost: ''
+  performanceHost: ''
+  registryHost: ''
+  objectsHost: ''
+  flHost: ''
+smtp:
+  host: ''

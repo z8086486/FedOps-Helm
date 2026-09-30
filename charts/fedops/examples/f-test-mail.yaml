@@ -1,0 +1,10 @@
+# F test mailbox only; not a relay to external mail accounts.
+smtp:
+  host: fedops-test-mail.fedops.svc.cluster.local
+  port: 1025
+  auth: false
+  starttls: false
+  starttlsRequired: false
+  ssl: false
+  fromAddress: noreply@fedops.test
+  fromName: FedOps Test

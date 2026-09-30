@@ -1,0 +1,105 @@
+{{- $roles := include "fedops.roles" . | fromYaml -}}
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .Release.Name }}-gateway
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "fedops.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- toYaml .Values.istio.ingressSelector | nindent 4 }}
+  servers:
+    - port:
+        number: {{ ternary 443 80 (eq .Values.access.scheme "https") }}
+        name: {{ .Values.access.scheme }}-fedops
+        protocol: {{ upper .Values.access.scheme }}
+      hosts:
+        {{- if .Values.access.singleOrigin }}
+        - {{ .Values.access.webHost | quote }}
+        {{- else }}
+        {{- range $key := list "webHost" "managerHost" "performanceHost" "registryHost" "objectsHost" }}
+        - {{ index $.Values.access $key | quote }}
+        {{- end }}
+        {{- end }}
+      {{- if eq .Values.access.scheme "https" }}
+      tls:
+        mode: SIMPLE
+        credentialName: {{ .Values.istio.tlsSecretName | quote }}
+      {{- end }}
+    {{- range $port := untilStep (int .Values.task.portMin) (int (add .Values.task.portMax 1)) 1 }}
+    - port:
+        number: {{ $port }}
+        name: tcp-fl-{{ $port }}
+        protocol: TCP
+      hosts: ["*"]
+    {{- end }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ .Release.Name }}-web
+  namespace: {{ .Release.Namespace }}
+spec:
+  hosts: [{{ .Values.access.webHost | quote }}]
+  gateways: [{{ printf "%s-gateway" .Release.Name | quote }}]
+  http:
+    {{- if .Values.access.singleOrigin }}
+    {{- range $role := list "manager" "performance" "registry" }}
+    {{- $s := index $roles $role }}
+    - name: {{ $role }}
+      match:
+        - uri: {prefix: {{ printf "/fedops/services/%s/" $role | quote }}}
+        - uri: {exact: {{ printf "/fedops/services/%s" $role | quote }}}
+      rewrite: {uri: /}
+      route:
+        - destination:
+            host: {{ $s.service }}.{{ $.Release.Namespace }}.svc.cluster.local
+            port: {number: {{ $s.servicePort }}}
+    {{- end }}
+    - name: objects
+      match:
+        {{- range $key := list "modelBucket" "xaiBucket" "registryLlmsBucket" "registryTasksBucket" "registryModelsBucket" }}
+        - uri: {exact: {{ printf "/%s" (index $.Values.storage $key) | quote }}}
+        - uri: {prefix: {{ printf "/%s/" (index $.Values.storage $key) | quote }}}
+        {{- end }}
+      route:
+        - destination:
+            host: {{ $roles.minio.service }}.{{ .Release.Namespace }}.svc.cluster.local
+            port: {number: 9000}
+    {{- end }}
+    - name: backend
+      match:
+        - uri: {prefix: /fedops/api/}
+        - uri: {exact: /fedops/api}
+        - uri: {prefix: /socket.io/}
+        - uri: {exact: /socket.io}
+      route:
+        - destination:
+            host: {{ $roles.backend.service }}.{{ .Release.Namespace }}.svc.cluster.local
+            port: {number: 4000}
+    - name: web
+      route:
+        - destination:
+            host: {{ $roles.frontend.service }}.{{ .Release.Namespace }}.svc.cluster.local
+            port: {number: 80}
+{{- if not .Values.access.singleOrigin }}
+{{- range $hostKey, $role := dict "managerHost" "manager" "performanceHost" "performance" "registryHost" "registry" "objectsHost" "minio" }}
+{{- $s := index $roles $role }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: {{ $.Release.Name }}-{{ $role }}-http
+  namespace: {{ $.Release.Namespace }}
+spec:
+  hosts: [{{ index $.Values.access $hostKey | quote }}]
+  gateways: [{{ printf "%s-gateway" $.Release.Name | quote }}]
+  http:
+    - route:
+        - destination:
+            host: {{ $s.service }}.{{ $.Release.Namespace }}.svc.cluster.local
+            port: {number: {{ $s.servicePort }}}
+{{- end }}
+{{- end }}
+{{/* Manager creates the Task VirtualService on first Task. Helm never owns it. */}}

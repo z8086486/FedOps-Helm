@@ -1,0 +1,15 @@
+# Fill these empty values before installation. Never put credentials here.
+nodeName: ""
+access:
+  webHost: ""
+  flHost: ""
+smtp:
+  host: ""
+# Prepare these four paths on the selected node before install.
+persistence:
+  mongo: {path: /data/fedops/fedops/mongo, size: 4Gi}
+  registryMongo: {path: /data/fedops/fedops/registry-mongo, size: 2Gi}
+  minio: {path: /data/fedops/fedops/minio, size: 8Gi}
+task:
+  storageBasePath: /data/fedops/fedops/tasks
+  storageCapacity: 2Gi

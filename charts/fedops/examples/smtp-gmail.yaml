@@ -1,0 +1,11 @@
+# Replace the sender with the Gmail account (or an authorized send-as alias).
+# Store that account and its app password in the Secret referenced by secrets.smtp.
+smtp:
+  host: smtp.gmail.com
+  port: 587
+  auth: true
+  starttls: true
+  starttlsRequired: true
+  ssl: false
+  fromAddress: "" # defaults to SPRING_MAIL_USERNAME from the Secret
+  fromName: FedOps

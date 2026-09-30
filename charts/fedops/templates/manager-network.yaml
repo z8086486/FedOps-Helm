@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-manager-network
+  namespace: {{ .Release.Namespace }}
+data:
+  scalable_server_operator.py: |
+{{ .Files.Get "files/manager-network/scalable_server_operator.py" | indent 4 }}
+  runtime_reconciler.py: |
+{{ .Files.Get "files/manager-network/runtime_reconciler.py" | indent 4 }}
