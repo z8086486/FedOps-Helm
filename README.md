@@ -8,7 +8,7 @@
 |---|---|---|---|
 | 온프레미스 싱글노드 | `onpremise-single-node` | 지정 노드 | 같은 노드의 로컬 디스크 |
 | 온프레미스 멀티노드 | `onpremise-multi-node` | 여러 노드에 배치 가능 | 지정 저장 노드에 고정 |
-| 카카오클라우드 기존 방식 | `kakaocloud-local` | 지정 VM 노드 | 같은 노드의 로컬 디스크 |
+| 카카오클라우드 싱글노드 | `kakaocloud-local` | 지정 VM 노드 | 같은 노드의 로컬 디스크 |
 | 카카오클라우드 멀티노드 | `kakaocloud-multi-node` | 여러 VM 노드에 배치 가능 | 지정 저장 노드에 고정 |
 
 `nodeName`은 싱글노드에서는 전체 앱의 노드, 멀티노드에서는 **DB·MinIO·Task의 저장 노드**임. 웹·Backend·Registry API·Manager·Performance·메일 Gateway는 멀티노드에서 다른 노드에 배치할 수 있음. 별도 저장장치 드라이버나 NAS를 설치하지 않음.
@@ -28,13 +28,61 @@ export NS=fedops
 kubectl --context="$CTX" get nodes -o wide
 ```
 
-### 카카오클라우드 멀티노드
+아래 네 가지 중 **설치 대상에 맞는 한 가지만 선택**함. 모든 명령은 **2~4절의 최초 설치 준비를 완료한 뒤** 실행함. `cp`는 새 사이트 파일을 만드는 예시이며, 이미 작성한 `sites/my-site.yaml`이 있으면 덮어쓰지 않고 확인·수정함.
+
+공통으로 `nodeName`, `access.webHost`, `access.flHost`, `smtp.host`와 필요한 SMTP 인증·TLS 설정을 입력함. 외부 주소에는 포트·경로를 넣지 않음. 기본 저장 용량은 사이트 예시에서 조정하며, 경로가 없으면 `values.yaml`의 `/data/fedops/fedops/{mongo,registry-mongo,minio,tasks}`를 사용함.
+
+### 1-1. 온프레미스 싱글노드
+
+```bash
+cp sites/onpremise-single-node.example.yaml sites/my-site.yaml
+# 사이트 값 입력 후 실행함. nodeName은 모든 FedOps 앱을 배치할 노드임.
+
+helm upgrade --install fedops ./charts/fedops \
+  --kube-context "$CTX" -n "$NS" \
+  -f charts/fedops/examples/images-minsoojo.yaml \
+  -f profiles/common.yaml \
+  -f profiles/onpremise-single-node.yaml \
+  -f sites/my-site.yaml
+```
+
+### 1-2. 온프레미스 멀티노드
+
+```bash
+cp sites/onpremise-multi-node.example.yaml sites/my-site.yaml
+# 사이트 값 입력 후 실행함. nodeName은 DB·MinIO·Task 저장 노드임.
+# 앱별 노드를 지정하려면 아래 workloads.*.nodeSelector 예시를 함께 적용함.
+
+helm upgrade --install fedops ./charts/fedops \
+  --kube-context "$CTX" -n "$NS" \
+  -f charts/fedops/examples/images-minsoojo.yaml \
+  -f profiles/common.yaml \
+  -f profiles/onpremise-multi-node.yaml \
+  -f sites/my-site.yaml
+```
+
+### 1-3. 카카오클라우드 싱글노드
+
+기존 `kakaocloud-local`이 싱글노드 배치용 프로파일임. 클러스터에 노드가 여러 대 있어도 FedOps 전체를 지정 VM 노드 한 대에 배치함.
+
+```bash
+cp sites/kakaocloud-local.example.yaml sites/my-site.yaml
+# 사이트 값 입력 후 실행함. nodeName은 모든 FedOps 앱을 배치할 VM 노드임.
+
+helm upgrade --install fedops ./charts/fedops \
+  --kube-context "$CTX" -n "$NS" \
+  -f charts/fedops/examples/images-minsoojo.yaml \
+  -f profiles/common.yaml \
+  -f profiles/kakaocloud-local.yaml \
+  -f sites/my-site.yaml
+```
+
+### 1-4. 카카오클라우드 멀티노드
 
 ```bash
 cp sites/kakaocloud-multi-node.example.yaml sites/my-site.yaml
-# nodeName: DB·MinIO·Task 데이터를 둘 실제 Kubernetes 노드 이름
-# access.webHost / access.flHost: 외부 IP 또는 DNS, 포트·경로 없이 입력
-# smtp.host: 사용 가능한 SMTP 서버
+# 사이트 값 입력 후 실행함. nodeName은 DB·MinIO·Task 저장 노드임.
+# 앱별 노드를 지정하려면 아래 workloads.*.nodeSelector 예시를 함께 적용함.
 
 helm upgrade --install fedops ./charts/fedops \
   --kube-context "$CTX" -n "$NS" \
@@ -42,35 +90,6 @@ helm upgrade --install fedops ./charts/fedops \
   -f profiles/common.yaml \
   -f profiles/kakaocloud-multi-node.yaml \
   -f sites/my-site.yaml
-```
-
-위 명령은 **2~4절의 최초 설치 준비를 완료한 뒤** 실행함. 기본 저장 용량은 사이트 예시에서 조정함. 예시에 경로가 없으면 `values.yaml`의 `/data/fedops/fedops/{mongo,registry-mongo,minio,tasks}`를 사용함.
-
-### 다른 환경의 설치 명령
-
-환경마다 해당 예시를 새로 복사하고 값을 입력함. 서로 다른 환경 설정을 이어서 덮어쓰지 않음.
-
-```bash
-# 온프레미스 싱글노드
-cp sites/onpremise-single-node.example.yaml sites/my-site.yaml
-# 사이트 값 입력 후:
-helm upgrade --install fedops ./charts/fedops --kube-context "$CTX" -n "$NS" \
-  -f charts/fedops/examples/images-minsoojo.yaml -f profiles/common.yaml \
-  -f profiles/onpremise-single-node.yaml -f sites/my-site.yaml
-
-# 온프레미스 멀티노드
-cp sites/onpremise-multi-node.example.yaml sites/my-site.yaml
-# 사이트 값 입력 후:
-helm upgrade --install fedops ./charts/fedops --kube-context "$CTX" -n "$NS" \
-  -f charts/fedops/examples/images-minsoojo.yaml -f profiles/common.yaml \
-  -f profiles/onpremise-multi-node.yaml -f sites/my-site.yaml
-
-# 카카오클라우드 기존 단일 지정 노드 방식
-cp sites/kakaocloud-local.example.yaml sites/my-site.yaml
-# 사이트 값 입력 후:
-helm upgrade --install fedops ./charts/fedops --kube-context "$CTX" -n "$NS" \
-  -f charts/fedops/examples/images-minsoojo.yaml -f profiles/common.yaml \
-  -f profiles/kakaocloud-local.yaml -f sites/my-site.yaml
 ```
 
 ### `--set`으로 같은 설정 선택
@@ -86,6 +105,13 @@ helm upgrade --install fedops ./charts/fedops --kube-context "$CTX" -n "$NS" \
 ```
 
 온프레미스는 `provider=onpremise`, 싱글노드는 `topology=single-node`로 변경함. 뒤의 파일과 `--set`이 앞의 값을 덮어씀.
+
+| 설치 대상 | `--set` 인자 |
+|---|---|
+| 온프레미스 싱글노드 | `--set deployment.provider=onpremise --set deployment.topology=single-node` |
+| 온프레미스 멀티노드 | `--set deployment.provider=onpremise --set deployment.topology=multi-node` |
+| 카카오클라우드 싱글노드 | `--set deployment.provider=kakaocloud --set deployment.topology=single-node` |
+| 카카오클라우드 멀티노드 | `--set deployment.provider=kakaocloud --set deployment.topology=multi-node` |
 
 앱별 노드를 정하려면 사이트 파일에 다음처럼 추가함. 실제 노드 이름으로 변경해야 함. DB·MinIO·Task는 이 설정과 관계없이 `nodeName`에 고정됨.
 
