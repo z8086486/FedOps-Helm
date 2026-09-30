@@ -650,34 +650,6 @@ def create_persistent_volume_and_claim(task_id: str, namespace: str = TARGET_NAM
     pvc_name = f"fl-data-{task_id}"
     pv_name = f"fl-pv-{task_id}"
     storage_class_name = f"sc-{task_id}"
-    mode = os.getenv("FEDOPS_TASK_STORAGE_MODE", "local")
-    if mode not in ("local", "storage-class"):
-        raise ValueError("Unsupported FEDOPS_TASK_STORAGE_MODE")
-    if mode == "storage-class":
-        storage_class = os.getenv("FEDOPS_TASK_STORAGE_CLASS", "").strip()
-        if not storage_class:
-            raise ValueError("FEDOPS_TASK_STORAGE_CLASS is required")
-        v1 = client.CoreV1Api()
-        pvc = client.V1PersistentVolumeClaim(
-            metadata=client.V1ObjectMeta(
-                name=pvc_name, namespace=namespace,
-                labels={"task_id": task_id, "type": "fl-data"},
-            ),
-            spec=client.V1PersistentVolumeClaimSpec(
-                access_modes=["ReadWriteOnce"], storage_class_name=storage_class,
-                resources=client.V1ResourceRequirements(requests={"storage": task_storage_capacity()}),
-            ),
-        )
-        try:
-            v1.create_namespaced_persistent_volume_claim(namespace, pvc)
-        except ApiException as exc:
-            if exc.status != 409:
-                raise
-            existing = v1.read_namespaced_persistent_volume_claim(pvc_name, namespace)
-            if (existing.metadata.labels or {}).get("task_id") != task_id or existing.spec.storage_class_name != storage_class:
-                raise ValueError("Existing Task PVC ownership/storageClass mismatch") from exc
-        # Do not wait for Bound here: WaitForFirstConsumer needs the Deployment first.
-        return pvc_name
     storage_node = hostpath_storage_node()
 
     # PV 생성

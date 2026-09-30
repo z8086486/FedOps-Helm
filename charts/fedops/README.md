@@ -4,7 +4,7 @@
 
 `deployment.provider`는 환경 구분이며 클라우드 인프라를 생성하지 않음.
 `deployment.topology=single-node`는 지정 노드 배치, `multi-node`는 분산 가능한 배치임.
-기본 카카오클라우드 구성은 `profiles/kakaocloud-local.yaml`을 사용하며 CSI 전환이 필요하지 않음.
+기본 카카오클라우드 구성은 `profiles/kakaocloud-local.yaml`을 사용하며 로컬 디스크를 유지함.
 
 ## 외부 Secret 계약
 

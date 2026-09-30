@@ -47,8 +47,6 @@ spec:
   {{- if eq (include "fedops.storageMode" $) "local" }}
   storageClassName: ""
   volumeName: {{ $name }}
-  {{- else }}
-  storageClassName: {{ default $.Values.deployment.storageClass $p.storageClass | quote }}
   {{- end }}
   resources:
     requests:

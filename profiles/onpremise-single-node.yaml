@@ -1,4 +1,3 @@
 deployment:
   provider: onpremise
   topology: single-node
-  storageMode: auto

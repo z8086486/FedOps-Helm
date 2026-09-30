@@ -1,22 +1,5 @@
-{{- $mode := include "fedops.storageMode" . -}}
-{{- if and (eq .Values.deployment.topology "single-node") (empty .Values.nodeName) -}}
-{{- fail "single-node requires nodeName" -}}
-{{- end -}}
-{{- if and (eq .Values.deployment.topology "multi-node") (not (empty .Values.nodeName)) -}}
-{{- fail "multi-node requires empty nodeName; use deployment.nodeSelector" -}}
-{{- end -}}
-{{- if and (eq .Values.deployment.topology "multi-node") (eq $mode "local") -}}
-{{- fail "multi-node requires storage-class storage, not local hostPath" -}}
-{{- end -}}
-{{- if eq $mode "storage-class" -}}
-{{- if empty (default .Values.deployment.storageClass .Values.task.storageClass) -}}
-{{- fail "storage-class mode requires task.storageClass or deployment.storageClass" -}}
-{{- end -}}
-{{- range $role, $p := .Values.persistence -}}
-{{- if and (empty $p.existingClaim) (empty (default $.Values.deployment.storageClass $p.storageClass)) -}}
-{{- fail (printf "persistence.%s requires storageClass or existingClaim" $role) -}}
-{{- end -}}
-{{- end -}}
+{{- if empty .Values.nodeName -}}
+{{- fail "nodeName is required for local storage" -}}
 {{- end -}}
 {{- if gt (len (include "fedops.prefix" .)) 40 -}}
 {{- fail "namespace + release name must be at most 39 characters (resource name suffixes)" -}}

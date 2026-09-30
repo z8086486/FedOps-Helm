@@ -1,8 +1,8 @@
 FedOps chart rendered for namespace {{ .Release.Namespace }}.
 Web: {{ include "fedops.publicUrl" (dict "root" . "host" "webHost") }}/fedops
 
-Before installation: prepare verified app images, Secrets, local directories or
-StorageClass-backed storage, MinIO buckets/app credentials, and separate Istio ingress.
+Before installation: prepare verified images, Secrets, local directories on nodeName,
+MinIO buckets/app credentials, and separate Istio ingress.
 The ingress Service must expose {{ ternary 443 80 (eq .Values.access.scheme "https") }} and every TCP port {{ .Values.task.portMin }}-{{ .Values.task.portMax }}.
 Manager owns {{ .Values.istio.taskVirtualServiceName }} and all dynamic Tasks.
 Keep FL range, Gateway name, and host stable while Tasks are active.

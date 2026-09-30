@@ -42,8 +42,7 @@ data:
   TARGET_NAMESPACE: {{ $.Release.Namespace | quote }}
   FEDOPS_TASK_SERVICE_TYPE: {{ $.Values.task.serviceType | quote }}
   FEDOPS_TASK_STORAGE_MODE: {{ include "fedops.storageMode" $ | quote }}
-  FEDOPS_TASK_STORAGE_CLASS: {{ default $.Values.deployment.storageClass $.Values.task.storageClass | quote }}
-  FEDOPS_TASK_NODE_SELECTOR: {{ ternary (dict "kubernetes.io/hostname" $.Values.nodeName) (default $.Values.deployment.nodeSelector $.Values.task.nodeSelector) (eq $.Values.deployment.topology "single-node") | toJson | quote }}
+  FEDOPS_TASK_NODE_SELECTOR: {{ dict "kubernetes.io/hostname" $.Values.nodeName | toJson | quote }}
   FEDOPS_DEPLOYMENT_TOPOLOGY: {{ $.Values.deployment.topology | quote }}
   FEDOPS_TASK_PUBLIC_HOST: {{ $.Values.access.flHost | quote }}
   FEDOPS_SERVER_MANAGER_URL: {{ include "fedops.url" (dict "root" $ "role" "manager") | quote }}

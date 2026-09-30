@@ -1,8 +1,6 @@
 {{/* Service names retain the existing application contracts. */}}
 {{- define "fedops.storageMode" -}}
-{{- if eq .Values.deployment.storageMode "auto" -}}
-{{- ternary "local" "storage-class" (eq .Values.deployment.topology "single-node") -}}
-{{- else -}}{{ .Values.deployment.storageMode }}{{- end -}}
+local
 {{- end -}}
 {{- define "fedops.roles" -}}
 frontend: {name: fedops-web-frontend, service: fedops-web-frontend-service, port: 3000, servicePort: 80}

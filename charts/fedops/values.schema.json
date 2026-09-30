@@ -245,15 +245,6 @@
             "ClusterIP",
             "LoadBalancer"
           ]
-        },
-        "storageClass": {
-          "type": "string"
-        },
-        "nodeSelector": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
         }
       },
       "required": [
@@ -488,8 +479,6 @@
       "required": [
         "provider",
         "topology",
-        "storageMode",
-        "storageClass",
         "nodeSelector"
       ],
       "properties": {
@@ -504,16 +493,6 @@
             "single-node",
             "multi-node"
           ]
-        },
-        "storageMode": {
-          "enum": [
-            "auto",
-            "local",
-            "storage-class"
-          ]
-        },
-        "storageClass": {
-          "type": "string"
         },
         "nodeSelector": {
           "type": "object",
@@ -653,9 +632,6 @@
               "const": ""
             }
           ]
-        },
-        "storageClass": {
-          "type": "string"
         }
       },
       "required": [

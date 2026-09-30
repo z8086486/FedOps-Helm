@@ -1,5 +1,3 @@
-nodeName: ""
 deployment:
   provider: kakaocloud
   topology: multi-node
-  storageMode: auto

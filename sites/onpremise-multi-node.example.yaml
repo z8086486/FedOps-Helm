@@ -1,6 +1,6 @@
-# Existing, tested dynamic provisioner required. Do not use kubernetes.io/no-provisioner.
+# Local storage remains on nodeName; apps may run on other workers.
+nodeName: ""
 deployment:
-  storageClass: ""
   # Optional worker selection, e.g. fedops.io/pool: workers
   nodeSelector: {}
 access:

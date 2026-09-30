@@ -4,9 +4,7 @@ nodeName: ""
 deployment:
   provider: onpremise
   topology: single-node
-  # auto: local for single-node, storage-class for multi-node.
-  storageMode: auto
-  storageClass: ""
+  # Data workloads and Tasks always use nodeName's local disk.
   nodeSelector: {}
 imagePullSecrets: []
 images:
@@ -44,8 +42,6 @@ istio:
 
 task:
   serviceType: ClusterIP
-  storageClass: ""
-  nodeSelector: {}
   storageBasePath: /data/fedops/fedops/tasks
   storageCapacity: 20Gi
   portMin: 40026

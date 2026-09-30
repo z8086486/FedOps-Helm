@@ -1,7 +1,6 @@
-# Set the actual CSI StorageClass name in YOUR cluster; do not guess it.
-# For zonal block storage, prefer WaitForFirstConsumer and reachable eligible AZs.
+# Local storage remains on nodeName; apps may run on other workers.
+nodeName: ""
 deployment:
-  storageClass: ""
   nodeSelector: {}
 access:
   webHost: ""

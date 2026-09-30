@@ -32,7 +32,7 @@ spec:
         checksum/manager-network: {{ include (print $.Template.BasePath "/manager-network.yaml") $ | sha256sum }}
         {{- end }}
     spec:
-      {{- if eq $.Values.deployment.topology "single-node" }}
+      {{- if or (eq $.Values.deployment.topology "single-node") (has $role (list "mongo" "registryMongo" "minio")) }}
       nodeSelector:
         kubernetes.io/hostname: {{ $.Values.nodeName | quote }}
       {{- else }}
